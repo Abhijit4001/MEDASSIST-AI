@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+streamlit
+langgraph
+langchain
+langchain-google-genai
+google-generativeai
+sqlalchemy
+chromadb
+apscheduler
+python-dotenv
+pydantic
+resend
+pytest
+requests
+httpx

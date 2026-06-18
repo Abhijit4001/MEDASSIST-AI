@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedAssist AI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#" aria-label="MedAssist AI home">
+      <span class="brand-mark">M</span>
+      <span>
+        <span class="brand-name">MedAssist AI</span>
+        <span class="brand-tag">Care workspace</span>
+      </span>
+    </a>
+
+    <section class="patient-panel">
+      <p class="eyebrow">Active patient</p>
+      <div class="patient-summary">
+        <span class="avatar" id="patient-avatar">AP</span>
+        <span>
+          <strong id="patient-name">Arjun Patel</strong>
+          <small id="patient-meta">Patient #1</small>
+        </span>
+      </div>
+      <label class="sr-only" for="patient-select">Choose patient</label>
+      <select id="patient-select" class="select-control">
+        <option value="1">Arjun Patel</option>
+        <option value="2">Sneha Reddy</option>
+      </select>
+    </section>
+
+    <nav class="nav-list" aria-label="Main navigation">
+      <button class="nav-btn active" data-view="chat">
+        <span class="nav-glyph">01</span>
+        Chat
+      </button>
+      <button class="nav-btn" data-view="doctors">
+        <span class="nav-glyph">02</span>
+        Doctors
+      </button>
+      <button class="nav-btn" data-view="appointments">
+        <span class="nav-glyph">03</span>
+        Appointments
+      </button>
+      <button class="nav-btn" data-view="records">
+        <span class="nav-glyph">04</span>
+        Records
+      </button>
+    </nav>
+
+    <section class="quick-panel">
+      <p class="eyebrow">Quick asks</p>
+      <button class="quick-btn" data-prompt="Find a cardiologist in Mumbai">Find a cardiologist</button>
+      <button class="quick-btn" data-prompt="Book Dr. Ananya on 2026-06-12 10:00">Book an appointment</button>
+      <button class="quick-btn" data-prompt="Show my medical records">Show my records</button>
+      <button class="quick-btn" data-prompt="Summary for appointment #1">Visit summary</button>
+    </section>
+  </aside>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Multi-agent healthcare assistant</p>
+        <h1 id="view-title">AI Care Chat</h1>
+        <p class="view-subtitle" id="view-subtitle">Route care requests to search, scheduling, records, reminders, and summaries.</p>
+      </div>
+      <div class="topbar-actions">
+        <span class="status-pill" id="api-status">
+          <span class="status-dot"></span>
+          Checking API
+        </span>
+        <span class="sync-pill" id="sync-pill">Last sync pending</span>
+        <button class="secondary-btn" id="refresh-btn" type="button">Refresh</button>
+        <button class="secondary-btn" id="command-btn" type="button">Command</button>
+      </div>
+    </header>
+
+    <section class="metrics-grid" aria-label="Care summary">
+      <article class="metric-card metric-card-primary">
+        <span class="metric-label">Doctors</span>
+        <strong id="metric-doctors">5</strong>
+        <small>available in network</small>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Appointments</span>
+        <strong id="metric-appointments">1</strong>
+        <small>for active patient</small>
+      </article>
+      <article class="metric-card">
+        <span class="metric-label">Allergies</span>
+        <strong id="metric-allergies">1</strong>
+        <small>clinical alerts</small>
+      </article>
+    </section>
+
+    <section class="care-strip" aria-label="Operational snapshot">
+      <article>
+        <span>Current route</span>
+        <strong id="route-label">General intake</strong>
+      </article>
+      <article>
+        <span>Directory scope</span>
+        <strong>4 cities, 5 specialties</strong>
+      </article>
+      <article>
+        <span>Data mode</span>
+        <strong id="data-mode-label">Checking API</strong>
+      </article>
+    </section>
+
+    <section class="content-area">
+      <section class="view active" id="view-chat" aria-labelledby="chat-heading">
+        <div class="chat-layout">
+          <div class="chat-feed" id="chat-feed">
+            <article class="welcome-card" id="welcome-card">
+              <span class="welcome-kicker">Ready when you are</span>
+              <h2 id="chat-heading">How can I help with care today?</h2>
+              <p>Ask about doctors, booking slots, patient records, reminders, or visit summaries. The assistant will route your request to the right backend agent.</p>
+              <div class="welcome-actions">
+                <button data-prompt="Find a dermatologist in Delhi">Search doctors</button>
+                <button data-prompt="List my appointments">Appointments</button>
+                <button data-prompt="Set appointment reminder">Reminder</button>
+              </div>
+            </article>
+          </div>
+          <div class="typing-row" id="typing-row" aria-live="polite">
+            <span class="avatar assistant">AI</span>
+            <span class="typing-bubble"><i></i><i></i><i></i></span>
+          </div>
+          <form class="composer" id="chat-form">
+            <label class="sr-only" for="chat-input">Message</label>
+            <textarea id="chat-input" rows="1" placeholder="Ask MedAssist AI about doctors, bookings, records..."></textarea>
+            <button class="send-btn" type="submit" aria-label="Send message">Send</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="view-doctors" aria-labelledby="doctors-heading">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Provider directory</p>
+            <h2 id="doctors-heading">Find the right clinician</h2>
+          </div>
+          <div class="filter-row">
+            <input id="doctor-search" class="input-control" type="search" placeholder="Search name, specialty, city" />
+            <select id="specialty-filter" class="select-control">
+              <option value="">All specialties</option>
+            </select>
+            <select id="location-filter" class="select-control">
+              <option value="">All locations</option>
+            </select>
+          </div>
+        </div>
+        <div class="doctor-grid" id="doctor-grid"></div>
+      </section>
+
+      <section class="view" id="view-appointments" aria-labelledby="appointments-heading">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Schedule</p>
+            <h2 id="appointments-heading">Appointments</h2>
+          </div>
+        </div>
+        <div class="appointment-list" id="appointment-list"></div>
+      </section>
+
+      <section class="view" id="view-records" aria-labelledby="records-heading">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Clinical profile</p>
+            <h2 id="records-heading">Patient Records</h2>
+          </div>
+        </div>
+        <div class="records-grid" id="records-grid"></div>
+      </section>
+    </section>
+  </main>
+
+  <aside class="drawer" id="doctor-drawer" aria-hidden="true" aria-labelledby="drawer-title">
+    <div class="drawer-panel">
+      <button class="icon-close" id="drawer-close" type="button" aria-label="Close doctor profile">Close</button>
+      <div id="drawer-content"></div>
+    </div>
+  </aside>
+
+  <section class="modal-shell" id="booking-modal" aria-hidden="true" aria-labelledby="booking-title">
+    <form class="modal-card" id="booking-form">
+      <button class="icon-close" id="booking-close" type="button" aria-label="Close booking form">Close</button>
+      <p class="eyebrow">Appointment booking</p>
+      <h2 id="booking-title">Book appointment</h2>
+      <input type="hidden" id="booking-doctor-id" />
+      <div class="form-grid">
+        <label>
+          Doctor
+          <input class="input-control" id="booking-doctor-name" type="text" readonly />
+        </label>
+        <label>
+          Slot
+          <select class="select-control" id="booking-slot" required></select>
+        </label>
+        <label class="wide-field">
+          Notes
+          <textarea id="booking-notes" rows="3" placeholder="Reason for visit or helpful context"></textarea>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" id="booking-cancel" type="button">Cancel</button>
+        <button class="send-btn" type="submit">Confirm booking</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="command-palette" id="command-palette" aria-hidden="true" aria-labelledby="command-title">
+    <div class="command-card">
+      <button class="icon-close" id="command-close" type="button" aria-label="Close command palette">Close</button>
+      <p class="eyebrow">Quick command</p>
+      <h2 id="command-title">Jump to anything</h2>
+      <input class="input-control" id="command-search" type="search" placeholder="Search actions, doctors, records, appointments" />
+      <div class="command-results" id="command-results"></div>
+    </div>
+  </section>
+
+  <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "name": "Arjun Patel",
+    "email": "arjun.patel@email.com",
+    "phone": "+91-9876543210",
+    "date_of_birth": "1990-05-15",
+    "medical_history": [
+      "Hypertension (controlled)",
+      "Seasonal allergies"
+    ],
+    "allergies": [
+      "Penicillin"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Sneha Reddy",
+    "email": "sneha.reddy@email.com",
+    "phone": "+91-9123456789",
+    "date_of_birth": "1985-11-22",
+    "medical_history": [
+      "Type 2 Diabetes"
+    ],
+    "allergies": []
+  }
+]

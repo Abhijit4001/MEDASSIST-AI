@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "name": "Ananya Sharma",
+    "specialty": "Cardiology",
+    "hospital": "City Heart Institute",
+    "location": "Mumbai",
+    "rating": 4.8,
+    "email": "ananya.sharma@cityheart.in",
+    "available_slots": [
+      "2026-06-12 10:00",
+      "2026-06-12 14:00",
+      "2026-06-13 09:00"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Rahul Mehta",
+    "specialty": "Dermatology",
+    "hospital": "SkinCare Clinic",
+    "location": "Delhi",
+    "rating": 4.6,
+    "email": "rahul.mehta@skincare.in",
+    "available_slots": [
+      "2026-06-12 11:00",
+      "2026-06-14 15:00"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Priya Nair",
+    "specialty": "Pediatrics",
+    "hospital": "Children's Wellness Center",
+    "location": "Bangalore",
+    "rating": 4.9,
+    "email": "priya.nair@kidshealth.in",
+    "available_slots": [
+      "2026-06-12 09:30",
+      "2026-06-13 16:00"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Vikram Singh",
+    "specialty": "Orthopedics",
+    "hospital": "Bone & Joint Hospital",
+    "location": "Mumbai",
+    "rating": 4.5,
+    "email": "vikram.singh@bonejoint.in",
+    "available_slots": [
+      "2026-06-15 10:00",
+      "2026-06-15 12:00"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Meera Kapoor",
+    "specialty": "General Physician",
+    "hospital": "Metro Health",
+    "location": "Pune",
+    "rating": 4.4,
+    "email": "meera.kapoor@metrohealth.in",
+    "available_slots": [
+      "2026-06-12 08:00",
+      "2026-06-12 17:00"
+    ]
+  }
+]
