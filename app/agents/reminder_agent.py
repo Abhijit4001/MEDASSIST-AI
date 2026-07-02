@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.agents.scheduling_agent import list_patient_appointments
-from app.services.notification_service import get_sent_reminders, schedule_reminder
+from app.services.notification_service import get_sent_reminders, list_appointment_reminders, schedule_reminder
 from app.database.db import get_db
 from app.database.models import Appointment
 
@@ -24,9 +24,13 @@ def run_reminder(message: str, patient_id: int = 1) -> str:
                     row.doctor.name,
                     row.datetime,
                 )
-                if result.get("sent_immediately"):
-                    return f"Reminder sent for appointment on {appt['datetime']}."
-                return f"Reminder scheduled for {result.get('run_at', appt['datetime'])}."
+                reminders = result.get("reminders", [])
+                if reminders:
+                    lines = [f"Scheduled {len(reminders)} reminder(s) for appointment #{appt['id']}:"]
+                    for item in reminders:
+                        lines.append(f"- {item['remind_at'][:16].replace('T', ' ')} ({item['type'].replace('_', ' ')})")
+                    return "\n".join(lines)
+                return "No future reminder windows are available for this appointment yet."
 
     lines = ["Your upcoming appointments:"]
     for appt in upcoming:

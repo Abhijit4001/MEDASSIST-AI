@@ -1,0 +1,12 @@
+cd c:\Users\abhij\OneDrive\Desktop\medai
+
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+
+
+python -m uvicorn app.main:app --reload
+
+
+
+curl.exe -s -m 2 http://127.0.0.1:8000/api/health 2>&1

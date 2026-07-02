@@ -3,12 +3,14 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.agents.call_agent import get_call_session, process_call_turn, start_call
 from app.agents.doctor_search_agent import search_doctors
 from app.agents.scheduling_agent import book_appointment, cancel_appointment, list_patient_appointments
 from app.agents.visit_summary_agent import generate_visit_summary
 from app.database.db import get_db
 from app.database.models import Doctor, Patient
 from app.memory.patient_memory import get_patient_profile
+from app.services.notification_service import list_appointment_reminders
 from app.workflows.healthcare_graph import run_healthcare_workflow
 
 router = APIRouter()
@@ -30,6 +32,14 @@ class BookRequest(BaseModel):
     doctor_id: int
     slot: str
     notes: str = ""
+
+
+class CallStartRequest(BaseModel):
+    patient_id: int = 1
+
+
+class CallTurnRequest(BaseModel):
+    message: str
 
 
 class DoctorSearchParams(BaseModel):
@@ -107,3 +117,32 @@ def summary(appointment_id: int):
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
+
+
+@router.post("/calls/start")
+def start_ai_call(request: CallStartRequest):
+    result = start_call(request.patient_id)
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@router.post("/calls/{call_id}/turn")
+def ai_call_turn(call_id: int, request: CallTurnRequest):
+    result = process_call_turn(call_id, request.message)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error", "Call failed"))
+    return result
+
+
+@router.get("/calls/{call_id}")
+def get_ai_call(call_id: int):
+    call = get_call_session(call_id)
+    if not call:
+        raise HTTPException(status_code=404, detail="Call session not found")
+    return call
+
+
+@router.get("/appointments/{appointment_id}/reminders")
+def appointment_reminders(appointment_id: int):
+    return list_appointment_reminders(appointment_id)

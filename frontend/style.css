@@ -84,6 +84,12 @@ button {
   cursor: pointer;
 }
 
+button:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -719,6 +725,11 @@ textarea {
   background: linear-gradient(135deg, var(--aqua), var(--blue));
 }
 
+.send-btn:disabled {
+  transform: none;
+  box-shadow: none;
+}
+
 .section-toolbar {
   display: flex;
   align-items: flex-end;
@@ -1243,5 +1254,326 @@ textarea {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.call-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.8fr);
+  gap: 18px;
+}
+
+.call-panel,
+.call-sidecard {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+.call-panel {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.call-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.call-status-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(21, 184, 166, 0.12);
+  color: var(--aqua-dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.call-status-pill.live {
+  background: rgba(224, 82, 99, 0.12);
+  color: var(--rose);
+}
+
+.call-status-pill.done {
+  background: rgba(21, 154, 102, 0.12);
+  color: var(--green);
+}
+
+.call-stage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.call-voice-stage {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px 18px;
+  align-items: center;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at top right, rgba(36, 107, 254, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 251, 0.92));
+}
+
+.call-orb {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  display: grid;
+  place-items: center;
+}
+
+.call-orb-ring,
+.call-orb-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.call-orb-ring {
+  border: 1px solid rgba(21, 184, 166, 0.18);
+  background: rgba(21, 184, 166, 0.08);
+}
+
+.call-orb-core {
+  inset: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, var(--aqua), var(--blue));
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(21, 184, 166, 0.28);
+}
+
+.call-orb-core svg {
+  width: 28px;
+  height: 28px;
+  fill: currentColor;
+}
+
+.call-orb.listening .call-orb-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
+  border-color: rgba(224, 82, 99, 0.35);
+  background: rgba(224, 82, 99, 0.12);
+}
+
+.call-orb.speaking .call-orb-ring {
+  animation: pulse-ring 1.1s ease-out infinite;
+  border-color: rgba(36, 107, 254, 0.35);
+  background: rgba(36, 107, 254, 0.12);
+}
+
+.call-orb.processing .call-orb-ring {
+  animation: spin-ring 1.4s linear infinite;
+  border-color: rgba(214, 138, 0, 0.35);
+  background: rgba(214, 138, 0, 0.12);
+}
+
+.call-voice-meta {
+  display: grid;
+  gap: 6px;
+}
+
+.call-voice-meta strong {
+  font-size: 1rem;
+}
+
+.call-voice-meta span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.call-voice-controls {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.voice-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: linear-gradient(145deg, var(--rose), #c63d52);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(224, 82, 99, 0.22);
+}
+
+.voice-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.voice-btn[aria-pressed="true"] {
+  transform: scale(0.98);
+  filter: brightness(1.05);
+}
+
+.voice-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.voice-toggle input {
+  accent-color: var(--aqua);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.85;
+  }
+  70% {
+    transform: scale(1.12);
+    opacity: 0.15;
+  }
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
+@keyframes spin-ring {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.call-stage,
+.call-timer {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.call-transcript {
+  min-height: 320px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(238, 244, 247, 0.72), rgba(255, 255, 255, 0.92));
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+}
+
+.call-line {
+  display: grid;
+  gap: 6px;
+  max-width: 88%;
+}
+
+.call-line.ai {
+  justify-self: start;
+}
+
+.call-line.patient {
+  justify-self: end;
+}
+
+.call-speaker {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.call-bubble {
+  padding: 12px 14px;
+  border-radius: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.call-line.ai .call-bubble {
+  background: rgba(36, 107, 254, 0.08);
+  border: 1px solid rgba(36, 107, 254, 0.12);
+}
+
+.call-line.patient .call-bubble {
+  background: rgba(21, 184, 166, 0.12);
+  border: 1px solid rgba(21, 184, 166, 0.18);
+}
+
+.call-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.call-composer,
+.call-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.call-composer .input-control {
+  flex: 1;
+}
+
+.call-sidecard {
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.reminder-list {
+  display: grid;
+  gap: 10px;
+}
+
+.reminder-item {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--soft-2);
+}
+
+.reminder-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.call-sidecard-note {
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+  .call-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .call-voice-stage {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .call-voice-controls {
+    justify-content: center;
   }
 }

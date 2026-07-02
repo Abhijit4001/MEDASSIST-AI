@@ -5,6 +5,18 @@ from app.database.db import get_db, init_db
 from app.database.models import Appointment, Doctor, Patient
 from app.utils.constants import DATA_DIR
 
+
+def _future_slots(day_offsets: list[int], times: list[str]) -> list[str]:
+    base = datetime.now().replace(second=0, microsecond=0)
+    slots = []
+    for offset in day_offsets:
+        for time_value in times:
+            hour, minute = time_value.split(":")
+            slot = (base + timedelta(days=offset)).replace(hour=int(hour), minute=int(minute))
+            slots.append(slot.strftime("%Y-%m-%d %H:%M"))
+    return slots
+
+
 SAMPLE_DOCTORS = [
     {
         "name": "Ananya Sharma",
@@ -13,7 +25,7 @@ SAMPLE_DOCTORS = [
         "location": "Mumbai",
         "rating": 4.8,
         "email": "ananya.sharma@cityheart.in",
-        "available_slots": ["2026-06-12 10:00", "2026-06-12 14:00", "2026-06-13 09:00"],
+        "available_slots": _future_slots([2, 3, 5], ["10:00", "14:00"]),
     },
     {
         "name": "Rahul Mehta",
@@ -22,7 +34,7 @@ SAMPLE_DOCTORS = [
         "location": "Delhi",
         "rating": 4.6,
         "email": "rahul.mehta@skincare.in",
-        "available_slots": ["2026-06-12 11:00", "2026-06-14 15:00"],
+        "available_slots": _future_slots([2, 4], ["11:00", "15:00"]),
     },
     {
         "name": "Priya Nair",
@@ -31,7 +43,7 @@ SAMPLE_DOCTORS = [
         "location": "Bangalore",
         "rating": 4.9,
         "email": "priya.nair@kidshealth.in",
-        "available_slots": ["2026-06-12 09:30", "2026-06-13 16:00"],
+        "available_slots": _future_slots([2, 3], ["09:30", "16:00"]),
     },
     {
         "name": "Vikram Singh",
@@ -40,7 +52,7 @@ SAMPLE_DOCTORS = [
         "location": "Mumbai",
         "rating": 4.5,
         "email": "vikram.singh@bonejoint.in",
-        "available_slots": ["2026-06-15 10:00", "2026-06-15 12:00"],
+        "available_slots": _future_slots([5, 6], ["10:00", "12:00"]),
     },
     {
         "name": "Meera Kapoor",
@@ -49,7 +61,7 @@ SAMPLE_DOCTORS = [
         "location": "Pune",
         "rating": 4.4,
         "email": "meera.kapoor@metrohealth.in",
-        "available_slots": ["2026-06-12 08:00", "2026-06-12 17:00"],
+        "available_slots": _future_slots([2, 2], ["08:00", "17:00"]),
     },
 ]
 

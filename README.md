@@ -1,44 +1,44 @@
 # MedAssist AI
 
-MedAssist AI is a multi-agent healthcare assistant for finding doctors, booking appointments, viewing patient records, setting reminders, and generating visit summaries. It includes a FastAPI backend, a Streamlit chat frontend, SQLite-backed demo data, and LangGraph-based routing between healthcare agents.
+MedAssist AI is a multi-agent healthcare assistant for finding doctors, booking appointments through an AI call agent, viewing patient records, and generating visit summaries. It ships with a FastAPI backend, an HTML workspace frontend, SQLite demo data, LangGraph routing, and date-based appointment reminders.
 
 ## Features
 
 - Chat endpoint that detects user intent and routes messages to the right agent.
+- **AI call booking** that conducts a phone-style conversation, books a slot, and schedules reminders automatically.
 - Doctor search by specialty, location, or name.
 - Appointment booking, cancellation, and appointment history.
+- **Date-based reminders** scheduled for the day before, morning of the visit, and two hours before the appointment.
 - Patient profile and medical record lookup.
 - Visit summary generation for appointments.
-- Optional Gemini integration for richer intent classification and text generation.
-- Streamlit frontend for interactive chat.
-- Docker Compose setup for running the API and frontend together.
+- Optional Gemini integration for richer call and chat responses.
+- HTML frontend served directly from FastAPI at `http://127.0.0.1:8000`.
 
 ## Tech Stack
 
 - Python 3.11+
 - FastAPI and Uvicorn
-- Streamlit
 - LangGraph and LangChain
 - SQLAlchemy with SQLite
 - ChromaDB for patient interaction memory
-- Google Gemini SDK
+- APScheduler for reminder jobs
+- Google Gemini SDK (optional)
 - Pytest
 
 ## Project Structure
 
 ```text
 app/
-  agents/          Healthcare task agents
+  agents/          Healthcare task agents, including AI call booking
   api/             FastAPI routes
   database/        SQLAlchemy models, DB session, seed data
   memory/          ChromaDB and patient memory helpers
-  services/        Gemini, email, and notification services
+  services/        Gemini, email, notifications, reminders
   utils/           Constants, prompts, helpers
   workflows/       LangGraph healthcare workflow
-frontend/          Streamlit and static frontend files
+frontend/          HTML/CSS/JS workspace
 data/              Exported demo JSON data
 tests/             Pytest test suite
-chroma_data/       Local ChromaDB persistence
 ```
 
 ## Getting Started
@@ -69,46 +69,85 @@ Create or update `.env` in the project root:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key
+RESEND_API_KEY=your_resend_api_key
+FROM_EMAIL=onboarding@resend.dev
 ```
 
-The app can still run without `GEMINI_API_KEY`; it will fall back to rule-based behavior where available.
+The app still runs without these keys. It falls back to rule-based call/chat behavior and logs reminder delivery locally when email is not configured.
 
-### 4. Start the API
+### 4. Start the app
+
+Run from the project root:
 
 ```bash
-uvicorn app.main:app --reload
+python -m app
 ```
 
-The API will be available at:
+Windows alternative if `python` is not on PATH:
 
-- API root: `http://127.0.0.1:8000`
+```powershell
+.\.venv\Scripts\python.exe -m app
+```
+
+You can also start Uvicorn directly:
+
+```bash
+python -m uvicorn app.main:app --reload
+```
+
+Open:
+
+- Frontend workspace: `http://127.0.0.1:8000`
 - Swagger docs: `http://127.0.0.1:8000/docs`
 - Health check: `http://127.0.0.1:8000/api/health`
 
 The database is seeded automatically when the API starts.
 
-### 5. Start the Streamlit frontend
+## AI Call Booking Flow
 
-In another terminal:
+1. Open the **AI Call** tab in the frontend.
+2. Click **Start AI Call**.
+3. Allow microphone access when the browser asks.
+4. Listen to the AI agent speak, then respond by voice or text.
+5. Example voice flow:
+   - `I need a cardiologist in Mumbai`
+   - `Dr. Ananya`
+   - `first`
+   - `yes`
 
-```bash
-streamlit run frontend/streamlit_app.py
-```
+Voice features:
 
-The frontend defaults to `http://127.0.0.1:8000/api` for backend calls.
+- **AI voice**: reads each agent response aloud.
+- **Hands-free**: automatically listens after the AI finishes speaking.
+- **Hold to speak**: manual push-to-talk using the mic button.
 
-## Running with Docker
+Best supported in Chrome or Edge. If voice is unavailable, type responses in the call input.
 
-```bash
-docker compose up --build
-```
+When the call completes:
 
-Services:
-
-- API: `http://127.0.0.1:8000`
-- Frontend: `http://127.0.0.1:8501`
+- The appointment is saved in SQLite.
+- Reminders are scheduled relative to the appointment date:
+  - Day before at 9:00 AM
+  - Appointment day at 8:00 AM
+  - Two hours before the visit
 
 ## API Examples
+
+### Start AI call
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/calls/start \
+  -H "Content-Type: application/json" \
+  -d "{\"patient_id\":1}"
+```
+
+### Continue AI call
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/calls/1/turn \
+  -H "Content-Type: application/json" \
+  -d "{\"message\":\"I need a cardiologist in Mumbai\"}"
+```
 
 ### Chat
 
@@ -118,45 +157,28 @@ curl -X POST http://127.0.0.1:8000/api/chat \
   -d "{\"message\":\"Find a cardiologist in Mumbai\",\"patient_id\":1}"
 ```
 
-### List doctors
+### View appointment reminders
 
 ```bash
-curl "http://127.0.0.1:8000/api/doctors?specialty=Cardiology&location=Mumbai"
-```
-
-### Book an appointment
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/appointments/book \
-  -H "Content-Type: application/json" \
-  -d "{\"patient_id\":1,\"doctor_id\":1,\"slot\":\"2026-06-12 10:00\",\"notes\":\"Routine checkup\"}"
-```
-
-### View patient appointments
-
-```bash
-curl http://127.0.0.1:8000/api/patients/1/appointments
+curl http://127.0.0.1:8000/api/appointments/1/reminders
 ```
 
 ## Testing
-
-Run the test suite with:
 
 ```bash
 pytest
 ```
 
-The tests create temporary SQLite databases and seed sample data automatically.
-
 ## Demo Prompts
 
-Try these in the Streamlit chat:
+Try these in chat:
 
 - `Find a cardiologist in Mumbai`
-- `Book Dr. Ananya on 2026-06-12 10:00`
 - `Show my medical records`
 - `Set appointment reminder`
 - `Summary for appointment #1`
+
+Or use the **AI Call** tab for full booking plus reminder scheduling.
 
 ## Notes
 

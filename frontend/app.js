@@ -1,4 +1,6 @@
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = window.location.protocol === "file:"
+  ? "http://127.0.0.1:8000/api"
+  : `${window.location.origin}/api`;
 
 const fallbackDoctors = [
   { id: 1, name: "Ananya Sharma", specialty: "Cardiology", hospital: "City Heart Institute", location: "Mumbai", rating: 4.8, email: "ananya.sharma@cityheart.in", available_slots: ["2026-06-12 10:00", "2026-06-12 14:00", "2026-06-13 09:00"] },
@@ -24,12 +26,25 @@ const state = {
   patients: { ...fallbackPatients },
   appointments: [...fallbackAppointments],
   activeDoctorId: null,
+  pendingRequest: false,
+  call: {
+    id: null,
+    active: false,
+    stage: "idle",
+    startedAt: null,
+    timerId: null,
+    voiceOutput: true,
+    autoListen: true,
+    voiceMode: "idle",
+    processing: false,
+  },
 };
 
 const titleByView = {
   chat: "AI Care Chat",
   doctors: "Doctor Directory",
   appointments: "Appointments",
+  call: "AI Booking Call",
   records: "Patient Records",
 };
 
@@ -37,6 +52,7 @@ const subtitleByView = {
   chat: "Route care requests to search, scheduling, records, reminders, and summaries.",
   doctors: "Compare specialists, locations, ratings, and open slots without leaving the workspace.",
   appointments: "Review upcoming visits and move directly into cancellation or summary workflows.",
+  call: "Let the AI call agent book a slot and schedule reminders based on the appointment date.",
   records: "Keep patient demographics, allergy alerts, and history visible while coordinating care.",
 };
 
@@ -115,6 +131,20 @@ function bindEvents() {
     if (event.target.id === "booking-modal") closeBookingModal();
   });
   document.getElementById("booking-form").addEventListener("submit", submitBooking);
+  document.getElementById("start-call-btn").addEventListener("click", startAiCall);
+  document.getElementById("end-call-btn").addEventListener("click", resetAiCall);
+  document.getElementById("quick-start-call").addEventListener("click", () => {
+    switchView("call");
+    startAiCall();
+  });
+  document.getElementById("call-form").addEventListener("submit", submitCallTurn);
+  document.getElementById("call-voice-output").addEventListener("change", (event) => {
+    state.call.voiceOutput = event.target.checked;
+  });
+  document.getElementById("call-auto-listen").addEventListener("change", (event) => {
+    state.call.autoListen = event.target.checked;
+  });
+  bindVoiceControls();
 
   document.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -130,6 +160,7 @@ function bindEvents() {
 }
 
 async function refreshData() {
+  setRefreshState(true);
   await checkApiHealth();
   await loadDoctors();
   await loadPatient(state.patientId);
@@ -140,6 +171,7 @@ async function refreshData() {
   renderDoctors();
   renderAppointments();
   renderRecords();
+  setRefreshState(false);
 }
 
 async function checkApiHealth() {
@@ -192,6 +224,12 @@ function updateApiStatus() {
   status.classList.toggle("offline", !state.apiOnline);
   status.lastChild.textContent = state.apiOnline ? " API connected" : " Demo data";
   document.getElementById("data-mode-label").textContent = state.apiOnline ? "Live backend" : "Local fallback";
+}
+
+function setRefreshState(isLoading) {
+  const button = document.getElementById("refresh-btn");
+  button.disabled = isLoading;
+  button.textContent = isLoading ? "Refreshing" : "Refresh";
 }
 
 function switchView(viewName) {
@@ -550,6 +588,8 @@ async function sendChat(message) {
   document.getElementById("welcome-card")?.remove();
   addMessage("user", message);
   showTyping(true);
+  state.pendingRequest = true;
+  setComposerEnabled(false);
 
   try {
     const response = await fetch(`${API_BASE}/chat`, {
@@ -567,8 +607,19 @@ async function sendChat(message) {
     renderAppointments();
   } catch (error) {
     showTyping(false);
-    addMessage("assistant", `I could not reach the API. Start the backend with: uvicorn app.main:app --reload\n\n${error.message}`);
+    addMessage("assistant", `I could not reach the API. From the project folder, start it with: python -m app\n\n${error.message}`);
+  } finally {
+    state.pendingRequest = false;
+    setComposerEnabled(true);
   }
+}
+
+function setComposerEnabled(isEnabled) {
+  const input = document.getElementById("chat-input");
+  const button = document.querySelector("#chat-form .send-btn");
+  input.disabled = !isEnabled;
+  button.disabled = !isEnabled;
+  if (isEnabled) input.focus();
 }
 
 function addMessage(role, message, intent = "") {
@@ -683,4 +734,394 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value);
+}
+
+const CallVoice = {
+  recognition: null,
+  supported: false,
+
+  init() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.supported = Boolean(SpeechRecognition && window.speechSynthesis);
+    if (!SpeechRecognition) return;
+
+    this.recognition = new SpeechRecognition();
+    this.recognition.lang = "en-IN";
+    this.recognition.interimResults = true;
+    this.recognition.continuous = false;
+    this.recognition.maxAlternatives = 1;
+
+    this.recognition.onresult = (event) => {
+      let interim = "";
+      let finalText = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += transcript;
+        else interim += transcript;
+      }
+      const input = document.getElementById("call-input");
+      input.value = (finalText || interim).trim();
+      if (finalText.trim()) {
+        stopListening(false);
+        deliverCallMessage(finalText.trim());
+      }
+    };
+
+    this.recognition.onerror = (event) => {
+      stopListening(false);
+      if (event.error !== "aborted" && event.error !== "no-speech") {
+        setVoiceStatus("Voice error", "Try again or type your response.");
+        toast(`Voice input error: ${event.error}`);
+      } else if (event.error === "no-speech" && state.call.active && state.call.autoListen) {
+        setVoiceStatus("Listening", "I did not catch that. Please speak again.");
+        window.setTimeout(() => {
+          if (state.call.active && !state.call.processing) startListening(true);
+        }, 700);
+      }
+    };
+
+    this.recognition.onend = () => {
+      if (state.call.voiceMode === "listening") {
+        setVoiceMode("idle");
+      }
+    };
+  },
+
+  speak(text) {
+    if (!this.supported || !state.call.voiceOutput || !text) {
+      return Promise.resolve();
+    }
+
+    window.speechSynthesis.cancel();
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-IN";
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find((voice) => /en-IN|en-GB|Google UK English Female|Microsoft Zira/i.test(`${voice.lang} ${voice.name}`));
+      if (preferred) utterance.voice = preferred;
+
+      utterance.onstart = () => {
+        setVoiceMode("speaking");
+        setVoiceStatus("AI speaking", "Listen to the agent and respond when prompted.");
+      };
+      utterance.onend = () => {
+        setVoiceMode("idle");
+        resolve();
+      };
+      utterance.onerror = () => {
+        setVoiceMode("idle");
+        resolve();
+      };
+      window.speechSynthesis.speak(utterance);
+    });
+  },
+
+  startListening() {
+    if (!this.supported || !this.recognition || state.call.processing || !state.call.active) return false;
+    if (state.call.voiceMode === "speaking") return false;
+    try {
+      this.recognition.start();
+      setVoiceMode("listening");
+      setVoiceStatus("Listening", "Speak naturally. Say your specialty, doctor choice, slot, then confirm.");
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  stop() {
+    if (this.recognition && state.call.voiceMode === "listening") {
+      try {
+        this.recognition.stop();
+      } catch {
+        // Ignore stop errors from browsers that already ended recognition.
+      }
+    }
+    window.speechSynthesis.cancel();
+    setVoiceMode("idle");
+  },
+};
+
+function bindVoiceControls() {
+  CallVoice.init();
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+
+  const micBtn = document.getElementById("call-mic-btn");
+  micBtn.addEventListener("mousedown", () => startListening(false));
+  micBtn.addEventListener("mouseup", () => stopListening(false));
+  micBtn.addEventListener("mouseleave", () => {
+    if (state.call.voiceMode === "listening" && !state.call.autoListen) stopListening(false);
+  });
+  micBtn.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    startListening(false);
+  }, { passive: false });
+  micBtn.addEventListener("touchend", (event) => {
+    event.preventDefault();
+    stopListening(false);
+  }, { passive: false });
+}
+
+function setVoiceMode(mode) {
+  state.call.voiceMode = mode;
+  const orb = document.getElementById("call-orb");
+  orb.classList.remove("listening", "speaking", "processing");
+  if (mode !== "idle") orb.classList.add(mode);
+  document.getElementById("call-mic-btn").setAttribute("aria-pressed", mode === "listening" ? "true" : "false");
+}
+
+function setVoiceStatus(title, hint) {
+  document.getElementById("call-voice-status").textContent = title;
+  document.getElementById("call-voice-hint").textContent = hint;
+}
+
+function startListening(autoTriggered = false) {
+  if (!CallVoice.supported) {
+    setVoiceStatus("Voice unavailable", "Use Chrome or Edge, or type your response below.");
+    return;
+  }
+  if (state.call.processing || !state.call.active) return;
+  if (autoTriggered && !state.call.autoListen) return;
+  CallVoice.startListening();
+}
+
+function stopListening(shouldProcess = false) {
+  if (CallVoice.recognition && state.call.voiceMode === "listening") {
+    try {
+      CallVoice.recognition.stop();
+    } catch {
+      // Ignore stop errors.
+    }
+  }
+  if (!shouldProcess) setVoiceMode("idle");
+}
+
+async function speakAiMessage(message) {
+  if (!message) return;
+  await CallVoice.speak(message);
+  if (state.call.active && state.call.autoListen && CallVoice.supported) {
+    window.setTimeout(() => startListening(true), 500);
+  }
+}
+
+async function deliverCallMessage(message) {
+  if (!message || !state.call.active || !state.call.id || state.call.processing) return;
+  document.getElementById("call-input").value = message;
+  await processCallTurn(message);
+}
+
+async function startAiCall() {
+  if (!state.apiOnline) {
+    toast("Start the backend with: python -m app");
+    return;
+  }
+
+  resetAiCall(false);
+  switchView("call");
+  setCallUi("connecting");
+  state.call.voiceOutput = document.getElementById("call-voice-output").checked;
+  state.call.autoListen = document.getElementById("call-auto-listen").checked;
+
+  try {
+    const response = await fetch(`${API_BASE}/calls/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patient_id: state.patientId }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    state.call = {
+      ...state.call,
+      id: data.call.id,
+      active: true,
+      stage: data.call.stage,
+      startedAt: Date.now(),
+      timerId: window.setInterval(updateCallTimer, 1000),
+      processing: false,
+    };
+    renderCallTranscript(data.call.transcript);
+    updateCallStage(data.call.stage);
+    setCallUi("live");
+    setVoiceStatus("Connected", CallVoice.supported ? "The AI agent is speaking now." : "Voice is unavailable in this browser. Type below instead.");
+    toast("AI call connected");
+    await speakAiMessage(data.ai_message);
+  } catch (error) {
+    resetAiCall();
+    toast(`Could not start AI call: ${error.message}`);
+  }
+}
+
+async function submitCallTurn(event) {
+  if (event) event.preventDefault();
+  const input = document.getElementById("call-input");
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = "";
+  await processCallTurn(message);
+}
+
+async function processCallTurn(message) {
+  if (!message || !state.call.active || !state.call.id || state.call.processing) return;
+
+  CallVoice.stop();
+  state.call.processing = true;
+  setVoiceMode("processing");
+  setVoiceStatus("Processing", "Finding doctors, slots, and booking details...");
+  setCallComposerEnabled(false);
+
+  try {
+    const response = await fetch(`${API_BASE}/calls/${state.call.id}/turn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.detail || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    renderCallTranscript(data.call.transcript);
+    updateCallStage(data.call.stage);
+    if (data.booked) {
+      renderCallReminders(data.reminders || data.call.reminders || []);
+      state.call.active = false;
+      setCallUi("done");
+      setVoiceStatus("Booking complete", "Your appointment is confirmed and reminders are scheduled.");
+      await speakAiMessage(data.ai_message);
+      await loadDoctors();
+      await loadAppointments(state.patientId);
+      renderAppointments();
+      updateMetrics();
+      toast("Appointment booked and reminders scheduled");
+    } else {
+      setVoiceStatus("Connected", "Respond when you are ready.");
+      await speakAiMessage(data.ai_message);
+    }
+  } catch (error) {
+    setVoiceStatus("Call issue", error.message);
+    toast(`Call failed: ${error.message}`);
+    if (state.call.active && state.call.autoListen) startListening(true);
+  } finally {
+    state.call.processing = false;
+    setVoiceMode("idle");
+    setCallComposerEnabled(state.call.active);
+  }
+}
+
+function resetAiCall(clearView = true) {
+  CallVoice.stop();
+  if (state.call.timerId) {
+    window.clearInterval(state.call.timerId);
+  }
+  state.call = {
+    id: null,
+    active: false,
+    stage: "idle",
+    startedAt: null,
+    timerId: null,
+    voiceOutput: document.getElementById("call-voice-output").checked,
+    autoListen: document.getElementById("call-auto-listen").checked,
+    voiceMode: "idle",
+    processing: false,
+  };
+  document.getElementById("call-transcript").innerHTML = `
+    <article class="call-empty">
+      <strong>Start a call to begin booking.</strong>
+      <p>Example flow: say you need a cardiologist in Mumbai, pick Dr. Ananya, choose a slot, then confirm with “yes”.</p>
+    </article>
+  `;
+  document.getElementById("call-reminders").innerHTML =
+    `<div class="empty-state">Reminders appear here once the AI confirms a booking.</div>`;
+  updateCallStage("idle");
+  setCallUi("idle");
+  setVoiceMode("idle");
+  setVoiceStatus("Voice idle", CallVoice.supported ? "Start a call to speak with the AI booking agent." : "Use Chrome or Edge for voice, or type responses below.");
+  if (clearView) switchView("call");
+}
+
+function renderCallTranscript(transcript) {
+  const container = document.getElementById("call-transcript");
+  if (!transcript?.length) return;
+  container.innerHTML = transcript.map((turn) => `
+    <article class="call-line ${turn.speaker === "ai" ? "ai" : "patient"}">
+      <span class="call-speaker">${turn.speaker === "ai" ? "MedAssist AI" : getPatient().name}</span>
+      <div class="call-bubble">${escapeHtml(turn.text)}</div>
+    </article>
+  `).join("");
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderCallReminders(reminders) {
+  const container = document.getElementById("call-reminders");
+  if (!reminders.length) {
+    container.innerHTML = `<div class="empty-state">No future reminder windows were available for this appointment.</div>`;
+    return;
+  }
+  container.innerHTML = reminders.map((item) => `
+    <article class="reminder-item">
+      <strong>${escapeHtml((item.type || "reminder").replaceAll("_", " "))}</strong>
+      <span>${escapeHtml(String(item.remind_at || item.remind_at).replace("T", " ").slice(0, 16))}</span>
+    </article>
+  `).join("");
+}
+
+function updateCallStage(stage) {
+  const labels = {
+    idle: "Not started",
+    collecting_need: "Understanding your need",
+    selecting_doctor: "Choosing a doctor",
+    selecting_slot: "Selecting a slot",
+    confirming: "Confirming booking",
+    completed: "Booking completed",
+  };
+  document.getElementById("call-stage-label").textContent = labels[stage] || stage;
+}
+
+function setCallUi(mode) {
+  const pill = document.getElementById("call-status-pill");
+  const input = document.getElementById("call-input");
+  const respondBtn = document.querySelector("#call-form .send-btn");
+  const startBtn = document.getElementById("start-call-btn");
+  const endBtn = document.getElementById("end-call-btn");
+
+  pill.classList.remove("live", "done");
+  if (mode === "connecting") {
+    pill.textContent = "Connecting";
+  } else if (mode === "live") {
+    pill.textContent = "Live call";
+    pill.classList.add("live");
+  } else if (mode === "done") {
+    pill.textContent = "Completed";
+    pill.classList.add("done");
+  } else {
+    pill.textContent = "Idle";
+    document.getElementById("call-timer").textContent = "00:00";
+  }
+
+  const live = mode === "live";
+  input.disabled = !live;
+  respondBtn.disabled = !live;
+  startBtn.disabled = live || mode === "connecting";
+  endBtn.disabled = mode === "idle" || mode === "connecting";
+  document.getElementById("call-mic-btn").disabled = !live || !CallVoice.supported;
+  if (live) input.focus();
+}
+
+function setCallComposerEnabled(enabled) {
+  const live = state.call.active && !state.call.processing;
+  document.getElementById("call-input").disabled = !enabled || !live;
+  document.querySelector("#call-form .send-btn").disabled = !enabled || !live;
+  document.getElementById("call-mic-btn").disabled = !enabled || !live || !CallVoice.supported;
+}
+
+function updateCallTimer() {
+  if (!state.call.startedAt) return;
+  const elapsed = Math.floor((Date.now() - state.call.startedAt) / 1000);
+  const minutes = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const seconds = String(elapsed % 60).padStart(2, "0");
+  document.getElementById("call-timer").textContent = `${minutes}:${seconds}`;
 }

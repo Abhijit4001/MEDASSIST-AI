@@ -4,7 +4,6 @@ from datetime import datetime
 
 from app.database.db import get_db
 from app.database.models import Appointment, Doctor, Patient
-from app.services.notification_service import schedule_reminder
 from app.utils.helpers import format_appointment, parse_datetime
 
 
@@ -21,6 +20,7 @@ def book_appointment(
     doctor_id: int,
     slot: str,
     notes: str = "",
+    booked_via: str = "manual",
 ) -> dict:
     appointment_time = parse_datetime(slot)
     if appointment_time is None:
@@ -48,18 +48,19 @@ def book_appointment(
         if existing:
             return {"success": False, "error": "This slot is already booked"}
 
+        slots.remove(slot)
+        doctor.available_slots = json.dumps(slots)
+
         appointment = Appointment(
             patient_id=patient_id,
             doctor_id=doctor_id,
             datetime=appointment_time,
             status="scheduled",
             notes=notes,
+            booked_via=booked_via,
         )
         session.add(appointment)
         session.flush()
-
-        slots.remove(slot)
-        doctor.available_slots = json.dumps(slots)
 
         result = {
             "success": True,
@@ -69,14 +70,17 @@ def book_appointment(
                 "doctor_name": doctor.name,
                 "datetime": appointment_time.strftime("%Y-%m-%d %H:%M"),
                 "status": appointment.status,
+                "booked_via": booked_via,
             },
         }
 
-        schedule_reminder(
+        from app.services.notification_service import schedule_appointment_reminders
+
+        result["reminders"] = schedule_appointment_reminders(
             appointment.id,
-            patient.email,
-            doctor.name,
             appointment_time,
+            doctor.name,
+            session=session,
         )
         return result
 

@@ -45,8 +45,12 @@
         <span class="nav-glyph">03</span>
         Appointments
       </button>
+      <button class="nav-btn" data-view="call">
+        <span class="nav-glyph">05</span>
+        AI Call
+      </button>
       <button class="nav-btn" data-view="records">
-        <span class="nav-glyph">04</span>
+        <span class="nav-glyph">06</span>
         Records
       </button>
     </nav>
@@ -57,6 +61,7 @@
       <button class="quick-btn" data-prompt="Book Dr. Ananya on 2026-06-12 10:00">Book an appointment</button>
       <button class="quick-btn" data-prompt="Show my medical records">Show my records</button>
       <button class="quick-btn" data-prompt="Summary for appointment #1">Visit summary</button>
+      <button class="quick-btn" id="quick-start-call" type="button">Start AI booking call</button>
     </section>
   </aside>
 
@@ -165,6 +170,83 @@
           </div>
         </div>
         <div class="appointment-list" id="appointment-list"></div>
+      </section>
+
+      <section class="view" id="view-call" aria-labelledby="call-heading">
+        <div class="call-layout">
+          <section class="call-panel">
+            <div class="call-header">
+              <div>
+                <p class="eyebrow">AI voice booking</p>
+                <h2 id="call-heading">Appointment Call Agent</h2>
+                <p class="view-subtitle">The AI call agent finds a doctor, confirms a slot, books the appointment, and schedules date-based reminders automatically.</p>
+              </div>
+              <div class="call-status-pill" id="call-status-pill">Idle</div>
+            </div>
+
+            <div class="call-stage-row">
+              <span class="call-stage" id="call-stage-label">Not started</span>
+              <span class="call-timer" id="call-timer">00:00</span>
+            </div>
+
+            <div class="call-voice-stage" id="call-voice-stage" aria-live="polite">
+              <div class="call-orb" id="call-orb">
+                <span class="call-orb-ring"></span>
+                <span class="call-orb-core">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z" />
+                  </svg>
+                </span>
+              </div>
+              <div class="call-voice-meta">
+                <strong id="call-voice-status">Voice idle</strong>
+                <span id="call-voice-hint">Start a call to hear the AI agent and respond by voice.</span>
+              </div>
+              <div class="call-voice-controls">
+                <button class="voice-btn" id="call-mic-btn" type="button" disabled aria-pressed="false" aria-label="Hold to speak">
+                  <span class="voice-btn-label">Hold to speak</span>
+                </button>
+                <label class="voice-toggle">
+                  <input id="call-voice-output" type="checkbox" checked />
+                  AI voice
+                </label>
+                <label class="voice-toggle">
+                  <input id="call-auto-listen" type="checkbox" checked />
+                  Hands-free
+                </label>
+              </div>
+            </div>
+
+            <div class="call-transcript" id="call-transcript">
+              <article class="call-empty">
+                <strong>Start a call to begin booking.</strong>
+                <p>Example flow: say you need a cardiologist in Mumbai, pick Dr. Ananya, choose a slot, then confirm with “yes”.</p>
+              </article>
+            </div>
+
+            <form class="call-composer" id="call-form">
+              <label class="sr-only" for="call-input">Your response on the call</label>
+              <input id="call-input" class="input-control" type="text" placeholder="Speak on the call... e.g. I need a cardiologist in Mumbai" disabled />
+              <button class="send-btn" type="submit" disabled>Respond</button>
+            </form>
+
+            <div class="call-actions">
+              <button class="send-btn" id="start-call-btn" type="button">Start AI Call</button>
+              <button class="secondary-btn" id="end-call-btn" type="button" disabled>End Call</button>
+            </div>
+          </section>
+
+          <aside class="call-sidecard">
+            <p class="eyebrow">After booking</p>
+            <h3>Reminder schedule</h3>
+            <div id="call-reminders" class="reminder-list">
+              <div class="empty-state">Reminders appear here once the AI confirms a booking.</div>
+            </div>
+            <div class="call-sidecard-note">
+              Reminders are scheduled for the day before, morning of the appointment, and two hours before the visit.
+            </div>
+          </aside>
+        </div>
       </section>
 
       <section class="view" id="view-records" aria-labelledby="records-heading">
